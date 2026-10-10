@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 投资 X Buddy
 
-## Getting Started
+面向投资研究者的个人 **Agent 工作台**：用户给出一个研究目标，系统规划任务、调用金融工具取证、管理上下文与长期状态，产出**可验证、可追溯**的研究成果，并在需要时请求确认。
 
-First, run the development server:
+> 本项目为秋招笔试题「题目 13｜投资 X Buddy」的提交。运行环境：Node.js ≥ 20、Next.js 16。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 一、用户与要解决的问题
+
+- **用户**：需要快速验证投资命题的研究者（覆盖基本面、估值、公告、研报等维度），希望每一个结论都能回到原始字段，而不是一句「我感觉」。
+- **痛点**：研究目标通常是模糊的（如「盈利改善来自主营业务」）。人很难同时做到「拆成可验证子问题 → 调数据 → 分正反证据 → 下可追溯结论 → 说明什么会推翻它」。
+- **本产品**：把这条链交给一个 Agent 主链路自动完成，同时把 Agent 的每一步（计划、工具、成本、时延）都暴露给用户看。
+
+## 二、主链路（核心体验）
+
+```
+输入研究目标
+  → ① 规划：拆成可验证子问题 + 选工具（planner）
+  → ② 执行：逐个调用金融工具取证（executor）
+  → ③ 综合：组织 支持/反对/无法验证 证据，下结论 + 翻转条件（synthesizer）
+  → ④ 检查点：保存运行，可恢复（state）
+  → ⑤ 合规：扫描违禁表述、挂免责声明（compliance）
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+界面把这条链映射成四块：**线程/任务计划**、**证据（支持/反对/无法验证，每条可追溯来源）**、**结论（含置信度与翻转条件）**、**可观测（步骤/成本/时延）**。支持多标的**比较**、把结果**保存为研究任务**（检查点）、**恢复历史运行**。
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 三、产品设计选择
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **数据源与工具解耦（适配器层）**：工具只声明「要什么」，数据从哪来由 `adapters.js` 决定。今天默认 `mock` 示例数据即可跑通全链路，未来接扶摇/iFinD 只改适配器、不动 Agent。
+2. **确定性的证据分类 + LLM 负责拆解**：证据的「支持/反对/无法验证」用可审计的阈值规则判定（如主营占比 ≥95% 记为支持），保证每个结论都能回到字段与阈值；LLM（DeepSeek）负责「把目标拆成子问题」这类需要理解的任务。**LLM 挂了会降级到离线规则，主链路不断。**
+3. **结论永远是「推断/不确定」，不是关于未来的「事实」**：单条证据标「事实/推断/外部参考」，整体结论只标「推断/不确定」——从产品结构上杜绝把观点包装成事实。
+4. **失败即「无法验证」，不假装正常**：数据缺失、接口失败、工具未注册，统一降级为「无法验证 + 原因」，绝不静默生成正常结论。
 
-## Learn More
+## 四、AI 的角色
 
-To learn more about Next.js, take a look at the following resources:
+| 环节 | 是否用 LLM | 说明 |
+| --- | --- | --- |
+| 任务规划（拆目标） | ✅ DeepSeek | 无 key 时降级为离线关键词模板 |
+| 证据分类（支持/反对） | ❌ 确定性规则 | 可审计、可测试 |
+| 结论措辞 | ❌ 确定性模板 | 基于证据计数与阈值 |
+| 翻转条件 | ❌ 确定性规则 | 由支持证据所依赖的阈值反推 |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+AI 使用与验证记录见 [docs/AI_USAGE.md](docs/AI_USAGE.md)。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 五、数据来源
 
-## Deploy on Vercel
+- **当前（默认）**：`mock` —— 内置的**示例数据**（宁德时代 300750、贵州茅台 600519、隆基绿能 601012、沪深300），全部为构造值，仅供演示，**不是真实行情/财报**。界面顶部会明确显示「数据源：mock」。
+- **扶摇**：已按官方文档（https://fuyao.aicubes.cn/docs/）搭好 HTTP 对接骨架，配置 `FUYAO_BASE_URL`/`FUYAO_API_KEY` 后即可尝试；端点路径以文档为准，未逐一验证。
+- **iFinD MCP**：MCP 协议（https://mcp.51ifind.com/），需要 MCP client 接入，当前**未接入**（见未做事项）。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 六、启动方式
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm install          # 首次
+npm run dev          # 开发：http://localhost:3000
+npm run build        # 生产构建
+npm run start        # 启动生产构建
+npm test             # 跑测试
+```
+
+## 七、环境变量
+
+复制 `.env.example` 为 `.env.local` 并填写（`.env.local` 已被 gitignore 忽略）：
+
+```bash
+DEEPSEEK_API_KEY=sk-xxx   # 可选；不填则用离线规则
+DATA_SOURCE=mock          # mock | fuyao | ifind
+# FUYAO_BASE_URL / FUYAO_API_KEY   # 可选，接真实扶摇数据
+```
+
+**不得在任何公开仓库提交 API Key。** 产品内不含任何用户持仓/隐私数据。
+
+## 八、测试说明
+
+运行 `npm test`（Node 内置测试，无需任何 key，纯离线确定性）。覆盖题目要求的三类场景：
+
+1. **主链路**：目标 → 拆任务 → 执行 → 结论（kind/置信度/翻转条件齐全）。
+2. **数据缺失 / 接口失败**：查不存在的代码，断言结果被标记为「无法验证」并带原因，而非编造数据。
+3. **合规边界**：断言结论不含确定性涨跌预测/买卖建议/收益承诺，且附免责声明。
+4. **停止规则**：断言步数上限会触发停止。
+
+## 九、合规
+
+- 不输出确定性涨跌预测、收益承诺、买卖建议（`lib/compliance.js` 对结论文本做违禁扫描）。
+- 事实 / 推断 / 不确定 / 外部参考四类标签在证据与结论上显式区分。
+- 每条证据可「追溯来源」：工具、数据源、标的、字段、值、单位、期间、时点。
+- 数据缺失/冲突/失败一律显式标注，不静默。
+
+## 十、已知边界与未做事项
+
+- **数据**：默认 mock 示例数据；扶摇/iFinD 尚未接入真实端点（iFinD 需 MCP client）。
+- **持久化**：检查点保存在内存 + 本地文件；部署到 Vercel 等 serverless 环境后文件系统只读，**跨请求/跨实例的持久化需要接数据库**（未做）。
+- **上下文压缩**：实现了简化版（`compressContext`），尚未接入长对话循环。
+- **审批流**：目前「停止」由用户在 UI 主动中断（AbortController），未做「每步都需人工批准」的细粒度审批门。
+- **结论措辞的 LLM 增强**：结论目前用确定性模板，可用 LLM 进一步润色（规划环节已用 LLM）。
+- **可观测**：已记录步骤/工具/时延/token 占位，未接真实 token 计量与 tracing 后端。
+
+## 十一、目录结构
+
+```
+app/
+  page.js                 # 前端 UI（线程/任务/证据/结论/可观测面板）
+  api/agent/route.js      # API 入口：规划→执行→综合→检查点→合规
+lib/
+  llm.js                  # DeepSeek 接入层（可插拔）
+  tools.js                # 能力/工具注册表
+  adapters.js             # 数据适配层（mock/扶摇/iFinD）
+  compliance.js           # 合规红线
+  data/mock.js            # 示例数据
+  agent/
+    planner.js            # 规划器
+    executor.js           # 执行器
+    synthesizer.js        # 综合器（证据链 + 结论 + 翻转条件）
+    state.js              # 记忆 / 检查点 / 上下文压缩
+    stop.js               # 停止规则与预算
+    observability.js      # 可观测
+tests/agent.test.mjs      # 测试
+```
