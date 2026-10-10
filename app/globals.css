@@ -439,6 +439,35 @@ body {
   border-top: 1px solid var(--border);
 }
 
+/* —— 七层 Harness 运行报告 —— */
+.harness-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.harness-list li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.harness-key {
+  flex: none;
+  width: 88px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.harness-val {
+  flex: 1;
+}
+
 /* —— 结论 —— */
 .conclusion {
   background: var(--panel-2);

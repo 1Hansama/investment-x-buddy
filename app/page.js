@@ -15,6 +15,7 @@ import {
   ListChecks,
   Clock,
   Coins,
+  Layers,
 } from "lucide-react";
 import {
   BarChart,
@@ -229,6 +230,8 @@ function ResultView({ run }) {
         {run.checkpointPath ? <> · 检查点已保存</> : <> · 检查点仅内存（只读环境）</>}
       </div>
 
+      <HarnessPanel run={run} />
+
       <TaskPanel tasks={run.tasks} />
 
       {symbols.length > 1 && <ComparisonPanel comparison={run.synthesis.comparison} />}
@@ -249,6 +252,44 @@ function ResultView({ run }) {
         );
       })}
     </div>
+  );
+}
+
+function HarnessPanel({ run }) {
+  const h = run.harness;
+  if (!h) return null;
+  const c = h.context || {};
+  const g = h.governance || {};
+  const v = h.validation || {};
+  const o = h.observability || {};
+  const r = h.recovery || {};
+  const orch = h.orchestration || {};
+  const leaks = run.compliance?.sensitiveLeaks?.length ?? 0;
+
+  const rows = [
+    ["上下文管理", `工作记忆 ${c.workingCount ?? 0} 条 · 长期记忆 ${c.longTermCount ?? 0} 条 · 压缩 ${c.compressionCount ?? 0} 次`],
+    ["工具调度层", `注册工具 7 个 · 本次调用 ${o.toolsCalled ?? 0} 次（只读自动批准）`],
+    ["任务编排", `规划 ${orch.planned ?? 0} · 执行 ${orch.executed ?? 0} · 无法验证 ${orch.unverifiable ?? 0} · 停止 ${orch.stopped ?? 0}`],
+    ["安全与治理", `审批 ${g.approvals?.length ?? 0} 项（需人工 ${g.deniedCount ?? 0}）· 审计 ${g.audit?.length ?? 0} 条 · 敏感泄露 ${leaks}`],
+    ["校验反馈", `校验分 ${v.score ?? "—"} · 冲突 ${v.conflicts?.length ?? 0} · 数据缺口 ${v.gaps?.length ?? 0}`],
+    ["可观测性", `步骤 ${o.steps ?? 0} · 时延 ${o.totalLatencyMs ?? 0}ms · 成本 ¥${g.cost?.cost ?? o.estimatedCost ?? 0}`],
+    ["异常恢复", `重试 ${r.retriedCount ?? 0} 次 · 熔断跳过 ${r.circuitSkippedCount ?? 0} 次`],
+  ];
+
+  return (
+    <section className="card">
+      <h2>
+        <Layers size={15} /> 七层 Harness · 运行报告
+      </h2>
+      <ul className="harness-list">
+        {rows.map(([k, val]) => (
+          <li key={k}>
+            <span className="harness-key">{k}</span>
+            <span className="harness-val muted">{val}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
