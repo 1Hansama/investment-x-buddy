@@ -1,20 +1,44 @@
+/* 观隅 · 宋式棋谱古籍 · 极简考据风
+   三色体系：墨（事实）/ 赭（推演）/ 朱砂（存疑），低饱和、无渐变、无阴影 */
+
 :root {
-  --bg: #0a0f1a;
-  --panel: #111a2b;
-  --panel-2: #152238;
-  --border: #22314a;
-  --text: #e6edf6;
-  --muted: #8aa0bb;
-  --accent: #4f8cff;
-  --support: #34d399;
-  --against: #f87171;
-  --unverifiable: #94a3b8;
-  --fact: #60a5fa;
-  --inference: #fbbf24;
-  --uncertain: #c084fc;
-  --reference: #94a3b8;
-  --font-ui: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --bg: #F3EBD9;            /* 页面基底 古笺 */
+  --panel: #EAE0CC;         /* 面板卡片 */
+  --panel-2: #F7F0E1;       /* 次级填充（输入框/统计块） */
+  --border: #C9B89E;        /* 分割线 淡古铜 */
+  --text: #2C241C;          /* 墨色 正文 */
+  --muted: #8a7a63;         /* 浅墨 辅助文字 */
+  --accent: #7A4F37;        /* 赭色 推演 */
+  --support: #4a5b3a;       /* 支持 沉绿（低饱和） */
+  --against: #A82C26;       /* 反对/存疑 朱砂 */
+  --unverifiable: #8a7a63;  /* 无法验证 浅墨灰 */
+  --fact: #2C241C;          /* 事实 墨 */
+  --inference: #7A4F37;     /* 推断 赭 */
+  --uncertain: #A82C26;     /* 不确定 朱砂 */
+  --reference: #8a7a63;     /* 外部参考 浅墨 */
+  --logo-fill: #F3EBD9;     /* Logo 内部底色（浅色） */
+  --font-ui: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
   --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #2C241C;
+    --panel: #332A1F;
+    --panel-2: #3B3023;
+    --border: #5C4F3E;
+    --text: #F3EBD9;
+    --muted: #B3A48C;
+    --accent: #C08A5F;
+    --support: #9DBD83;
+    --against: #D9837B;
+    --unverifiable: #B3A48C;
+    --fact: #F3EBD9;
+    --inference: #D8A877;
+    --uncertain: #D9837B;
+    --reference: #B3A48C;
+    --logo-fill: #2C241C;
+  }
 }
 
 * {
@@ -52,24 +76,34 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-.brand-mark {
-  color: var(--accent);
-  font-size: 26px;
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  color: var(--text);
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 20px;
-  letter-spacing: 0.5px;
+  font-size: 22px;
+  letter-spacing: 4px;
+  font-weight: 700;
+}
+
+.slogan {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 1px;
 }
 
 .subtitle {
-  margin: 2px 0 0;
+  margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .badges {
@@ -78,18 +112,21 @@ body {
   flex-wrap: wrap;
 }
 
-/* —— 通用 —— */
+/* —— 通用卡片 —— */
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
+  box-shadow: none;
 }
 
 .card h2 {
   margin: 0 0 12px;
   font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .muted {
@@ -97,6 +134,7 @@ body {
   font-weight: 400;
 }
 
+/* —— chip —— */
 .chip {
   display: inline-block;
   padding: 3px 10px;
@@ -107,21 +145,21 @@ body {
   color: var(--text);
 }
 
-.chip-blue { border-color: #2d4a7a; color: #9cc3ff; }
-.chip-green { border-color: #1f5c46; color: #6ee7b7; }
-.chip-red { border-color: #7a2d2d; color: #fca5a5; }
+.chip-blue { color: var(--muted); }
+.chip-green { border-color: #7a8a5f; color: var(--support); }
+.chip-red { border-color: var(--against); color: var(--against); }
 
 .chip-example {
   cursor: pointer;
   text-align: left;
   color: var(--muted);
   border-color: var(--border);
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.2s, border-color 0.2s;
 }
 
 .chip-example:hover {
   color: var(--text);
-  border-color: var(--accent);
+  border-color: var(--text);
 }
 
 /* —— 输入卡 —— */
@@ -136,6 +174,12 @@ body {
   padding: 12px;
   resize: vertical;
   outline: none;
+  line-height: 1.7;
+}
+
+.input-card textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
 }
 
 .input-card textarea:focus {
@@ -147,6 +191,7 @@ body {
   font-size: 12px;
   color: var(--muted);
   margin-bottom: 6px;
+  letter-spacing: 1px;
 }
 
 .input-actions {
@@ -164,40 +209,51 @@ body {
   align-items: center;
 }
 
-/* —— 按钮 —— */
+/* —— 按钮（筹牌样式：细边框、古笺底、墨字；hover 仅轻微变暗） —— */
 .btn {
   border: 1px solid var(--border);
-  background: var(--panel-2);
+  background: transparent;
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 8px 14px;
   font-size: 13px;
+  font-family: var(--font-ui);
   cursor: pointer;
-  transition: filter 0.15s;
+  letter-spacing: 1px;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 
-.btn:hover { filter: brightness(1.15); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:hover { border-color: var(--text); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #06111f; font-weight: 600; }
-.btn-danger { background: #7f1d1d; border-color: #7f1d1d; }
-.btn-ghost { background: transparent; }
+.btn-primary { border-color: var(--text); font-weight: 700; }
+.btn-primary:hover { background: var(--panel-2); }
+
+.btn-danger { border-color: var(--against); color: var(--against); }
+.btn-danger:hover { background: var(--panel-2); }
+
+.btn-ghost { border-color: transparent; color: var(--muted); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border); }
+
 .btn-small { padding: 3px 10px; font-size: 12px; }
-.btn-trace { padding: 2px 8px; font-size: 11px; color: var(--muted); background: transparent; }
+.btn-trace { padding: 2px 8px; font-size: 11px; color: var(--muted); border-color: transparent; }
+.btn-trace:hover { color: var(--accent); border-color: transparent; }
 
 /* —— 提示条 —— */
 .banner {
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 12px 16px;
   margin-bottom: 16px;
   font-size: 13px;
+  border: 1px solid var(--border);
+  animation: fadeIn 0.25s ease;
 }
 
-.banner-error { background: #2a1215; border: 1px solid #7a2d2d; color: #fca5a5; }
-.banner-info { background: #12203a; border: 1px solid #2d4a7a; color: #9cc3ff; }
+.banner-error { color: var(--against); border-color: var(--against); }
+.banner-info { color: var(--muted); }
 
 /* —— 结果布局 —— */
-.result { margin-top: 8px; }
+.result { margin-top: 8px; animation: fadeIn 0.25s ease; }
 
 .run-meta {
   font-size: 12px;
@@ -234,9 +290,9 @@ body {
 
 .task-index {
   flex: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--muted);
@@ -250,8 +306,8 @@ body {
   flex: none;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: #9cc3ff;
-  background: #12203a;
+  color: var(--accent);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 2px 6px;
 }
@@ -274,10 +330,10 @@ body {
   text-align: center;
 }
 
-.stat-value { font-size: 16px; font-weight: 600; font-family: var(--font-mono); }
+.stat-value { font-size: 16px; font-weight: 700; font-family: var(--font-mono); }
 .stat-label { font-size: 11px; }
 
-/* —— trace —— */
+/* —— 运行日志（trace） —— */
 .trace-list {
   list-style: none;
   margin: 0;
@@ -294,8 +350,8 @@ body {
 
 .dot {
   flex: none;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--muted);
 }
@@ -329,7 +385,7 @@ body {
 .conclusion {
   background: var(--panel-2);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 14px;
   margin-bottom: 14px;
 }
@@ -357,7 +413,7 @@ body {
   border-radius: 3px;
 }
 
-.conclusion-statement { font-size: 14px; line-height: 1.6; margin: 0 0 10px; }
+.conclusion-statement { font-size: 14px; line-height: 1.7; margin: 0 0 10px; }
 
 .flip h3,
 .conflict h3,
@@ -365,7 +421,8 @@ body {
   font-size: 12px;
   color: var(--muted);
   margin: 10px 0 6px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 1px;
 }
 
 .flip ul,
@@ -377,35 +434,41 @@ body {
 .flip ul { padding-left: 18px; line-height: 1.7; }
 
 .conflict {
-  background: #241a12;
-  border: 1px solid #5c3d1f;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--uncertain);
   border-radius: 8px;
   padding: 10px;
   margin-top: 8px;
+  background: transparent;
 }
 
-/* —— 徽章 —— */
+/* —— 印章徽章（事实/推断/不确定/外部参考） —— */
 .badge {
   display: inline-block;
-  padding: 1px 8px;
-  border-radius: 999px;
+  padding: 1px 7px;
+  border-radius: 4px;
   font-size: 11px;
   border: 1px solid;
-  line-height: 1.6;
+  line-height: 1.7;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: transparent;
+  animation: stampIn 0.4s ease;
 }
 
-.badge-fact { color: #9cc3ff; border-color: #2d4a7a; background: #12203a; }
-.badge-inference { color: #fcd34d; border-color: #6b5116; background: #241d08; }
-.badge-uncertain { color: #d8b4fe; border-color: #5b3d82; background: #1e1330; }
-.badge-reference { color: #cbd5e1; border-color: #334155; background: #1a2433; }
+.badge-fact { color: var(--fact); border-color: var(--fact); }
+.badge-inference { color: var(--inference); border-color: var(--inference); }
+.badge-uncertain { color: var(--uncertain); border-color: var(--uncertain); }
+.badge-reference { color: var(--reference); border-color: var(--border); }
 
-/* —— 证据 —— */
+/* —— 证据（三色文本块：透明底 + 左侧竖线 + 按 实/推/疑 着色） —— */
 .evidence-group { margin-top: 8px; }
 
 .ev-title {
   font-size: 13px;
   margin: 10px 0 6px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .ev-title-support { color: var(--support); }
@@ -418,32 +481,38 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .evidence {
   border: 1px solid var(--border);
   border-left-width: 3px;
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 8px 12px;
+  background: transparent;
 }
 
-.ev-support { border-left-color: var(--support); }
-.ev-against { border-left-color: var(--against); }
-.ev-unverifiable { border-left-color: var(--unverifiable); }
+.ev-fact { border-left-color: var(--fact); }
+.ev-inference { border-left-color: var(--inference); }
+.ev-uncertain { border-left-color: var(--uncertain); }
+.ev-reference { border-left-color: var(--border); }
 
 .evidence-main {
   display: flex;
   gap: 8px;
   align-items: baseline;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.7;
 }
 
 .evidence-claim { flex: 1; }
+.claim-fact { color: var(--fact); }
+.claim-inference { color: var(--inference); }
+.claim-uncertain { color: var(--uncertain); }
+.claim-reference { color: var(--reference); }
 
 .source-box {
-  background: #0a101c;
+  background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px;
@@ -464,10 +533,10 @@ body {
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
-/* —— 历史 —— */
+/* —— 历史检查点 —— */
 .history-list {
   list-style: none;
   margin: 0;
@@ -497,5 +566,37 @@ body {
   border-top: 1px solid var(--border);
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.7;
+}
+
+/* —— 加载：算筹缓缓落下（无旋转） —— */
+.loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-rod {
+  flex: none;
+  width: 3px;
+  height: 16px;
+  background: var(--accent);
+  animation: rodFall 1.2s ease-in-out infinite;
+}
+
+/* —— 动效：低速淡入，无弹跳/闪光 —— */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes stampIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rodFall {
+  0% { transform: translateY(-4px); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: translateY(4px); opacity: 0.4; }
 }

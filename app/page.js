@@ -81,9 +81,16 @@ export default function Home() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark">◆</span>
+          <svg className="brand-logo" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+            <rect x="3" y="3" width="94" height="94" rx="16" fill="var(--logo-fill)" stroke="currentColor" strokeWidth="4" />
+            <path d="M58 78 H81" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            <path d="M78 57 V81" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="69" cy="69" r="6.5" fill="currentColor" />
+            <path d="M31 31 L43 43" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
           <div>
-            <h1>投资 X Buddy</h1>
+            <h1>观隅</h1>
+            <p className="slogan">独坐一隅，灵悉万象</p>
             <p className="subtitle">个人投资研究 Agent 工作台</p>
           </div>
         </div>
@@ -135,7 +142,10 @@ export default function Home() {
       {error && <div className="banner banner-error">请求失败：{error}</div>}
       {loading && (
         <div className="banner banner-info">
-          Agent 正在规划并逐项取证（可点「停止」中断）…
+          <span className="loading">
+            <span className="loading-rod" />
+            Agent 正在规划并逐项取证（可点「停止」中断）…
+          </span>
         </div>
       )}
 
@@ -332,11 +342,12 @@ function EvidenceGroup({ title, stance, items, expanded, setExpanded }) {
         {items.map((e, i) => {
           const key = `${e.source?.field || e.source?.tool}-${i}`;
           const open = expanded === key;
+          const kind = e.type || (e.stance === "unverifiable" ? "uncertain" : "fact");
           return (
-            <li key={key} className={`evidence ev-${e.stance}`}>
+            <li key={key} className={`evidence ev-${kind}`}>
               <div className="evidence-main">
-                <span className={`badge badge-${e.type || "fact"}`}>{KIND[e.type] || e.type}</span>
-                <span className="evidence-claim">{e.claim}</span>
+                <span className={`badge badge-${kind}`}>{KIND[kind] || kind}</span>
+                <span className={`evidence-claim claim-${kind}`}>{e.claim}</span>
               </div>
               <button className="btn btn-trace" onClick={() => setExpanded(open ? null : key)}>
                 {open ? "收起来源" : "追溯来源"}
