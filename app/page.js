@@ -43,6 +43,7 @@ export default function Home() {
   const [run, setRun] = useState(null);
   const [error, setError] = useState(null);
   const [history, setHistory] = useState([]);
+  const [source, setSource] = useState(null);
   const abortRef = useRef(null);
 
   async function listHistory() {
@@ -61,6 +62,10 @@ export default function Home() {
 
   useEffect(() => {
     listHistory();
+    fetch("/api/datasource")
+      .then((r) => r.json())
+      .then((d) => setSource(d))
+      .catch(() => {});
   }, []);
 
   async function callAgent(body) {
@@ -133,8 +138,8 @@ export default function Home() {
         </div>
 
         <div className="topbar-right">
-          <span className="chip chip-blue">数据源：{run ? run.dataSource : "mock（示例）"}</span>
-          <span className="chip chip-blue">模型：{run ? (run.llm === "deepseek" ? "DeepSeek" : "离线规则") : "—"}</span>
+          <span className="chip chip-blue">数据源：{run ? run.dataSource : (source?.dataSource ?? "…")}</span>
+          <span className="chip chip-blue">模型：{run ? (run.llm === "deepseek" ? "DeepSeek" : "离线规则") : (source ? (source.llm === "deepseek" ? "DeepSeek" : "离线规则") : "…")}</span>
           {run?.compliance?.issues?.length ? (
             <span className="chip chip-red">
               <AlertTriangle size={12} /> 合规命中

@@ -3,8 +3,9 @@
 // 注意：不返回任何密钥明文，只返回「是否已配置」的布尔值。
 export async function GET() {
   return Response.json({
-    dataSource: process.env.DATA_SOURCE || "(未设置，默认 mock)",
+    dataSource: process.env.DATA_SOURCE || "mock",
     fuyaoKeyConfigured: Boolean(process.env.FUYAO_API_KEY),
+    llm: process.env.DEEPSEEK_API_KEY ? "deepseek" : "offline-fallback",
     nodeEnv: process.env.NODE_ENV || "(未设置)",
   });
 }

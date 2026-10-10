@@ -55,6 +55,9 @@ export async function POST(request) {
   const tPlan0 = Date.now();
   trace.add({ type: "plan", label: "开始规划", status: "running" });
   const tasks = await plan(goal);
+  if (!tasks.length) {
+    return Response.json({ error: "无法从研究目标中解析出 A 股代码或已知股票名称，请补充 6 位代码后重试。" }, { status: 400 });
+  }
   trace.add({ type: "plan", label: `规划完成，共 ${tasks.length} 个任务`, status: "done", latencyMs: Date.now() - tPlan0, tokens: estimateTokens(goal) });
 
   // —— 安全与治理：工具审批 + 审计 ——
