@@ -94,6 +94,7 @@ DATA_SOURCE=mock          # mock | fuyao | ifind
 ## 十、已知边界与未做事项
 
 - **数据**：默认 mock 示例数据；扶摇已接入真实行情/估值/财报/K线/指数，但无 A 股公告、研报、历史估值分位、主营占比、非经常损益（界面如实标注为「无数据」）；iFinD 需 MCP client，尚未接入。
+- **部署到 Vercel 的扶摇可达性**：扶摇 API 位于中国大陆（`fuyao.aicubes.cn` → 124.67.x.x / 同花顺国内 CDN），**Vercel 海外节点可能访问不到**，需部署后实测；若真数据报「扶摇调用失败」，可把 Vercel 部署区域改为香港 `hkg1` 重试，或先用 `DATA_SOURCE=mock` 保证线上 URL 可操作、真数据在本地演示（见 §十二）。
 - **持久化**：检查点保存在内存 + 本地文件；部署到 Vercel 等 serverless 环境后文件系统只读，**跨请求/跨实例的持久化需要接数据库**（未做）。
 - **上下文跨进程**：线程/工作记忆/长期记忆为单实例内存实现（`lib/agent/context.js`），未做跨请求持久化；部署到 Vercel 后需接数据库才能跨实例共享。
 - **审批 UI**：写操作类工具的「人工审批」策略已实现（`lib/agent/governance.js`），但当前 7 个工具均为只读，前端未暴露审批交互。
@@ -128,5 +129,23 @@ docs/
   HARNESS.md              # 七层 Harness 功能介绍
   TESTING.md              # 测试说明
   AI_USAGE.md             # AI 使用与验证记录
-tests/agent.test.mjs      # 测试（12 个用例）
+scripts/
+  smoke-fuyao.mjs         # 扶摇连通性冒烟测试（本地验证真数据）
+tests/agent.test.mjs      # 主链路/治理/harness 测试
+tests/fuyao-adapter.test.mjs  # 扶摇真适配器测试（离线 mock fetch，共 21 用例）
 ```
+
+## 十二、部署到 Vercel（获取公开 URL）
+
+1. 在 vercel.com 用 GitHub 登录，**Add New → Project → Import** 本仓库 `1Hansama/investment-x-buddy`（已公开）。
+2. 框架自动识别为 Next.js，构建命令 `npm run build`、输出目录 `.next`（默认即可，无需改）。
+3. 在 **Environment Variables** 填写（**不要**把 Key 写进仓库，仓库里只有不含真值的 `.env.example`）：
+   ```
+   DATA_SOURCE=fuyao
+   FUYAO_API_KEY=sk-fuyao-…（你的扶摇 Key）
+   # 可选：DEEPSEEK_API_KEY=sk-…（不填则用离线规划，主链路不受影响）
+   ```
+4. **Deploy** → 得到 `https://investment-x-buddy-<随机>.vercel.app`。
+5. **验证真数据**：部署后在页面输入目标，若顶部显示「数据源：fuyao」且返回真实行情/财报即成功。若真数据报「扶摇调用失败」，说明 Vercel 节点访问不到扶摇（见 §十），可改 `DATA_SOURCE=mock` 保证线上可操作，真数据用本地 `npm run dev` / 演示视频呈现。
+
+> 本地起真数据：`.env.local` 配 `DATA_SOURCE=fuyao` + `FUYAO_API_KEY`，`npm run dev`（详见 §五/§七）。
