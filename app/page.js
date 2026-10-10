@@ -1,6 +1,31 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as Collapsible from "@radix-ui/react-collapsible";
+import * as ScrollArea from "@radix-ui/react-scroll-area";
+import {
+  Play,
+  Square,
+  History,
+  ChevronDown,
+  Activity,
+  Gauge,
+  AlertTriangle,
+  CheckCircle2,
+  ListChecks,
+  Clock,
+  Coins,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as ChartTooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 const EXAMPLES = [
   "分析宁德时代(300750)盈利是否改善、是否来自主营业务",
@@ -8,8 +33,8 @@ const EXAMPLES = [
   "贵州茅台600519的估值是否合理、基本面是否稳健",
 ];
 
-const STANCE = { support: "支持", against: "反对", unverifiable: "无法验证" };
 const KIND = { fact: "事实", inference: "推断", uncertain: "不确定", reference: "外部参考" };
+const MAX_STEPS = 12; // 与 lib/agent/stop.js 的 BUDGET.maxSteps 一致
 
 export default function Home() {
   const [goal, setGoal] = useState("");
@@ -17,8 +42,25 @@ export default function Home() {
   const [run, setRun] = useState(null);
   const [error, setError] = useState(null);
   const [history, setHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
   const abortRef = useRef(null);
+
+  async function listHistory() {
+    try {
+      const res = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "list" }),
+      });
+      const data = await res.json();
+      if (res.ok) setHistory(data.runs || []);
+    } catch {
+      /* 历史列表加载失败不影响主流程 */
+    }
+  }
+
+  useEffect(() => {
+    listHistory();
+  }, []);
 
   async function callAgent(body) {
     abortRef.current = new AbortController();
@@ -34,7 +76,10 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) setError(data.error || "请求失败");
-      else setRun(data.run ?? data);
+      else {
+        setRun(data.run ?? data);
+        listHistory();
+      }
     } catch (e) {
       if (e.name !== "AbortError") setError(e.message);
     } finally {
@@ -49,17 +94,6 @@ export default function Home() {
   function stopAgent() {
     if (abortRef.current) abortRef.current.abort();
     setLoading(false);
-  }
-
-  async function listHistory() {
-    const res = await fetch("/api/agent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "list" }),
-    });
-    const data = await res.json();
-    setHistory(data.runs || []);
-    setShowHistory(true);
   }
 
   async function recover(id) {
@@ -77,6 +111,9 @@ export default function Home() {
     }
   }
 
+  const steps = run?.trace?.summary?.steps || 0;
+  const budgetPct = Math.min(100, Math.round((steps / MAX_STEPS) * 100));
+
   return (
     <div className="app">
       <header className="topbar">
@@ -91,96 +128,98 @@ export default function Home() {
           <div>
             <h1>观隅</h1>
             <p className="slogan">独坐一隅，灵悉万象</p>
-            <p className="subtitle">个人投资研究 Agent 工作台</p>
           </div>
         </div>
-        <div className="badges">
+
+        <div className="topbar-right">
           <span className="chip chip-blue">数据源：{run ? run.dataSource : "mock（示例）"}</span>
           <span className="chip chip-blue">模型：{run ? (run.llm === "deepseek" ? "DeepSeek" : "离线规则") : "—"}</span>
           {run?.compliance?.issues?.length ? (
-            <span className="chip chip-red">⚠ 合规扫描命中</span>
+            <span className="chip chip-red">
+              <AlertTriangle size={12} /> 合规命中
+            </span>
           ) : (
-            <span className="chip chip-green">合规：通过</span>
+            <span className="chip chip-green">
+              <CheckCircle2 size={12} /> 合规通过
+            </span>
+          )}
+          {run && (
+            <div className="budget" title="预算消耗（步骤 / 时延）">
+              <Gauge size={14} />
+              <span className="budget-num">{steps}/{MAX_STEPS}</span>
+              <span className="muted">{run.trace?.summary?.totalLatencyMs ?? 0}ms</span>
+              <div className="budget-bar">
+                <div className="budget-fill" style={{ width: `${budgetPct}%` }} />
+              </div>
+            </div>
+          )}
+          {loading && (
+            <button className="btn btn-danger" onClick={stopAgent}>
+              <Square size={14} /> 停止
+            </button>
           )}
         </div>
       </header>
 
-      <section className="card input-card">
-        <label className="field-label" htmlFor="goal">
-          研究目标
-        </label>
-        <textarea
-          id="goal"
-          value={goal}
-          onChange={(e) => setGoal(e.target.value)}
-          placeholder="输入一个投资研究目标，例如：分析宁德时代(300750)盈利是否改善、是否来自主营业务"
-          rows={2}
-        />
-        <div className="input-actions">
-          <button className="btn btn-primary" onClick={() => runAgent(goal)} disabled={loading || !goal.trim()}>
-            {loading ? "运行中…" : "开始研究"}
-          </button>
-          {loading && (
-            <button className="btn btn-danger" onClick={stopAgent}>
-              停止
-            </button>
-          )}
-          <button className="btn btn-ghost" onClick={listHistory}>
-            历史检查点
-          </button>
-        </div>
-        <div className="examples">
-          <span className="muted">示例：</span>
-          {EXAMPLES.map((e) => (
-            <button key={e} className="chip chip-example" onClick={() => { setGoal(e); runAgent(e); }}>
-              {e}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {error && <div className="banner banner-error">请求失败：{error}</div>}
-      {loading && (
-        <div className="banner banner-info">
-          <span className="loading">
-            <span className="loading-rod" />
-            Agent 正在规划并逐项取证（可点「停止」中断）…
-          </span>
-        </div>
-      )}
-
-      {showHistory && (
-        <section className="card">
-          <h2>历史检查点（记忆 / 恢复）</h2>
-          {history.length === 0 ? (
-            <p className="muted">暂无保存的运行。</p>
-          ) : (
-            <ul className="history-list">
-              {history.map((id) => (
-                <li key={id}>
-                  <code>{id}</code>
-                  <button className="btn btn-small" onClick={() => recover(id)}>
-                    恢复
-                  </button>
-                </li>
+      <div className="workspace">
+        <main className="canvas">
+          <section className="card input-card">
+            <label className="field-label" htmlFor="goal">
+              研究目标
+            </label>
+            <textarea
+              id="goal"
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              placeholder="输入一个投资研究目标，例如：分析宁德时代(300750)盈利是否改善、是否来自主营业务"
+              rows={2}
+            />
+            <div className="input-actions">
+              <button className="btn btn-primary" onClick={() => runAgent(goal)} disabled={loading || !goal.trim()}>
+                <Play size={14} /> {loading ? "运行中…" : "开始研究"}
+              </button>
+            </div>
+            <div className="examples">
+              <span className="muted">示例：</span>
+              {EXAMPLES.map((e) => (
+                <button key={e} className="chip chip-example" onClick={() => { setGoal(e); runAgent(e); }}>
+                  {e}
+                </button>
               ))}
-            </ul>
+            </div>
+          </section>
+
+          {error && (
+            <div className="banner banner-error">
+              <AlertTriangle size={14} /> 请求失败：{error}
+            </div>
           )}
-        </section>
-      )}
+          {loading && (
+            <div className="banner banner-info">
+              <span className="loading">
+                <span className="loading-rod" />
+                Agent 正在规划并逐项取证（可点右上「停止」中断）…
+              </span>
+            </div>
+          )}
 
-      {run && <ResultView run={run} />}
+          {run && <ResultView run={run} />}
 
-      <footer className="disclaimer">
-        {run?.synthesis?.disclaimer || "基于公开/示例数据的整理与推断，不构成投资建议。"}
-      </footer>
+          <footer className="disclaimer">
+            {run?.synthesis?.disclaimer || "基于公开/示例数据的整理与推断，不构成投资建议。"}
+          </footer>
+        </main>
+
+        <aside className="sidebar">
+          <TracePanel trace={run?.trace} />
+          <HistoryPanel history={history} onRecover={recover} onRefresh={listHistory} />
+        </aside>
+      </div>
     </div>
   );
 }
 
 function ResultView({ run }) {
-  const [expanded, setExpanded] = useState(null);
-
   const symbols = Object.keys(run.synthesis.bySymbol);
 
   return (
@@ -190,32 +229,25 @@ function ResultView({ run }) {
         {run.checkpointPath ? <> · 检查点已保存</> : <> · 检查点仅内存（只读环境）</>}
       </div>
 
-      <div className="grid">
-        <div className="col-left">
-          <TaskPanel tasks={run.tasks} />
-          <TracePanel trace={run.trace} />
-        </div>
+      <TaskPanel tasks={run.tasks} />
 
-        <div className="col-right">
-          {symbols.length > 1 && <ComparisonPanel comparison={run.synthesis.comparison} />}
+      {symbols.length > 1 && <ComparisonPanel comparison={run.synthesis.comparison} />}
 
-          {symbols.map((s) => {
-            const g = run.synthesis.bySymbol[s];
-            return (
-              <section key={s} className="card">
-                <h2>
-                  {g.name} <span className="muted">（{s}）</span>
-                </h2>
-                <ConclusionCard c={g.conclusion} />
-                <EvidenceGroup title="支持" stance="support" items={g.evidence.filter((e) => e.stance === "support")} expanded={expanded} setExpanded={setExpanded} />
-                <EvidenceGroup title="反对" stance="against" items={g.evidence.filter((e) => e.stance === "against")} expanded={expanded} setExpanded={setExpanded} />
-                <EvidenceGroup title="无法验证" stance="unverifiable" items={[...g.evidence.filter((e) => e.stance === "unverifiable"), ...g.unverifiable]} expanded={expanded} setExpanded={setExpanded} />
-                {g.materials.length > 0 && <MaterialsPanel items={g.materials} />}
-              </section>
-            );
-          })}
-        </div>
-      </div>
+      {symbols.map((s) => {
+        const g = run.synthesis.bySymbol[s];
+        return (
+          <section key={s} className="card">
+            <h2>
+              {g.name} <span className="muted">（{s}）</span>
+            </h2>
+            <ConclusionCard c={g.conclusion} />
+            <EvidenceGroup title="支持" stance="support" items={g.evidence.filter((e) => e.stance === "support")} />
+            <EvidenceGroup title="反对" stance="against" items={g.evidence.filter((e) => e.stance === "against")} />
+            <EvidenceGroup title="无法验证" stance="unverifiable" items={[...g.evidence.filter((e) => e.stance === "unverifiable"), ...g.unverifiable]} />
+            {g.materials.length > 0 && <MaterialsPanel items={g.materials} />}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -223,7 +255,9 @@ function ResultView({ run }) {
 function TaskPanel({ tasks }) {
   return (
     <section className="card">
-      <h2>任务计划（Agent 规划）</h2>
+      <h2>
+        <ListChecks size={15} /> 任务计划（Agent 规划）
+      </h2>
       <ol className="task-list">
         {tasks.map((t, i) => (
           <li key={i}>
@@ -238,45 +272,107 @@ function TaskPanel({ tasks }) {
 }
 
 function TracePanel({ trace }) {
+  if (!trace) {
+    return (
+      <section className="card sidebar-card">
+        <h2>
+          <Activity size={15} /> 运行日志
+        </h2>
+        <p className="muted">启动分析后，Agent 每一步会在此实时留痕。</p>
+      </section>
+    );
+  }
+
   const s = trace.summary;
   return (
-    <section className="card">
-      <h2>可观测（步骤 / 成本）</h2>
+    <section className="card sidebar-card">
+      <h2>
+        <Activity size={15} /> 运行日志
+      </h2>
       <div className="stats">
-        <Stat label="步骤" value={s.steps} />
-        <Stat label="调用工具" value={s.toolsCalled} />
-        <Stat label="时延" value={`${s.totalLatencyMs}ms`} />
-        <Stat label="token" value={s.totalTokens || "—"} />
+        <Stat icon={<ListChecks size={12} />} label="步骤" value={s.steps} />
+        <Stat icon={<Coins size={12} />} label="调用工具" value={s.toolsCalled} />
+        <Stat icon={<Clock size={12} />} label="时延" value={`${s.totalLatencyMs}ms`} />
+        <Stat icon={<Gauge size={12} />} label="token" value={s.totalTokens || "—"} />
       </div>
-      <ul className="trace-list">
-        {trace.events.map((ev, i) => (
-          <li key={i}>
-            <span className={`dot dot-${ev.status}`} />
-            <span className="muted">#{ev.step}</span> {ev.label}
-            {ev.latencyMs ? <span className="muted"> ({ev.latencyMs}ms)</span> : null}
-          </li>
-        ))}
-      </ul>
+      <ScrollArea.Root className="scroll-root">
+        <ScrollArea.Viewport className="scroll-viewport">
+          <ul className="trace-list">
+            {trace.events.map((ev, i) => (
+              <li key={i}>
+                <span className={`dot dot-${ev.status}`} />
+                <span className="muted">#{ev.step}</span> {ev.label}
+                {ev.latencyMs ? <span className="muted">（{ev.latencyMs}ms）</span> : null}
+              </li>
+            ))}
+          </ul>
+        </ScrollArea.Viewport>
+        <ScrollArea.Scrollbar className="scrollbar" orientation="vertical">
+          <ScrollArea.Thumb className="scroll-thumb" />
+        </ScrollArea.Scrollbar>
+      </ScrollArea.Root>
     </section>
   );
 }
 
-function Stat({ label, value }) {
+function Stat({ icon, label, value }) {
   return (
     <div className="stat">
       <div className="stat-value">{value}</div>
-      <div className="stat-label muted">{label}</div>
+      <div className="stat-label muted">
+        {icon} {label}
+      </div>
     </div>
   );
 }
 
+function HistoryPanel({ history, onRecover, onRefresh }) {
+  return (
+    <section className="card sidebar-card">
+      <h2>
+        <History size={15} /> 历史检查点
+      </h2>
+      {history.length === 0 ? (
+        <p className="muted">暂无已保存的运行。</p>
+      ) : (
+        <ul className="history-list">
+          {history.map((id) => (
+            <li key={id}>
+              <code>{id}</code>
+              <button className="btn btn-small" onClick={() => onRecover(id)}>
+                恢复
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button className="btn btn-ghost btn-small" onClick={onRefresh}>
+        刷新
+      </button>
+    </section>
+  );
+}
+
 function ComparisonPanel({ comparison }) {
+  const chartData = comparison.map((r) => ({
+    name: r.name,
+    支持: r.supportCount,
+    反对: r.againstCount,
+    无法验证: r.unverifiableCount,
+  }));
+
   return (
     <section className="card">
       <h2>标的对比</h2>
       <table className="cmp-table">
         <thead>
-          <tr><th>标的</th><th>支持</th><th>反对</th><th>无法验证</th><th>倾向</th></tr>
+          <tr>
+            <th>标的</th>
+            <th>支持</th>
+            <th>反对</th>
+            <th>无法验证</th>
+            <th>倾向</th>
+          </tr>
         </thead>
         <tbody>
           {comparison.map((r) => (
@@ -290,6 +386,20 @@ function ComparisonPanel({ comparison }) {
           ))}
         </tbody>
       </table>
+      <div className="chart-box">
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#C9B89E" />
+            <XAxis dataKey="name" tick={{ fill: "#2C241C", fontSize: 12 }} />
+            <YAxis allowDecimals={false} tick={{ fill: "#2C241C", fontSize: 12 }} />
+            <ChartTooltip />
+            <Legend />
+            <Bar dataKey="支持" fill="#4a5b3a" />
+            <Bar dataKey="反对" fill="#A82C26" />
+            <Bar dataKey="无法验证" fill="#8a7a63" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </section>
   );
 }
@@ -331,7 +441,7 @@ function ConclusionCard({ c }) {
   );
 }
 
-function EvidenceGroup({ title, stance, items, expanded, setExpanded }) {
+function EvidenceGroup({ title, stance, items }) {
   if (!items.length) return null;
   return (
     <div className="evidence-group">
@@ -341,20 +451,23 @@ function EvidenceGroup({ title, stance, items, expanded, setExpanded }) {
       <ul className="evidence-list">
         {items.map((e, i) => {
           const key = `${e.source?.field || e.source?.tool}-${i}`;
-          const open = expanded === key;
           const kind = e.type || (e.stance === "unverifiable" ? "uncertain" : "fact");
           return (
             <li key={key} className={`evidence ev-${kind}`}>
-              <div className="evidence-main">
-                <span className={`badge badge-${kind}`}>{KIND[kind] || kind}</span>
-                <span className={`evidence-claim claim-${kind}`}>{e.claim}</span>
-              </div>
-              <button className="btn btn-trace" onClick={() => setExpanded(open ? null : key)}>
-                {open ? "收起来源" : "追溯来源"}
-              </button>
-              {open && (
-                <pre className="source-box">{JSON.stringify(e.source, null, 2)}</pre>
-              )}
+              <Collapsible.Root>
+                <div className="evidence-main">
+                  <span className={`badge badge-${kind}`}>{KIND[kind] || kind}</span>
+                  <span className={`evidence-claim claim-${kind}`}>{e.claim}</span>
+                  <Collapsible.Trigger asChild>
+                    <button className="btn btn-trace">
+                      追溯来源 <ChevronDown className="chev" size={12} />
+                    </button>
+                  </Collapsible.Trigger>
+                </div>
+                <Collapsible.Content className="collapsible-content">
+                  <pre className="source-box">{JSON.stringify(e.source, null, 2)}</pre>
+                </Collapsible.Content>
+              </Collapsible.Root>
             </li>
           );
         })}
